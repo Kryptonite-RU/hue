@@ -48,10 +48,11 @@ jobs:
 
           export PYTHON_VER=python3.8
           make apps
+          pip3 install --isolated mozilla_django_oidc gevent greenlet==1.0.0 py4j gunicorn
 
-      - name: run tests
-        run: |
-          PYTHONWARNINGS=always ./build/env/bin/hue test unit --with-xunit --with-cover
+#      - name: run tests
+#        run: |
+#          PYTHONWARNINGS=always ./build/env/bin/hue test unit --with-xunit --with-cover
 
       - name: Log in to the Container registry
         uses: docker/login-action@f054a8b539a109f9f41c372932f1ae047eff08c9
