@@ -82,6 +82,8 @@ RUN ./build/env/bin/pip install --no-cache-dir \
   # otherwise Code: 516, Authentication failed will display
   infi.clickhouse_orm==1.0.4
 
+RUN ./build/env/bin/pip install --no-cache-dir install --isolated mozilla_django_oidc gevent greenlet==1.0.0 py4j gunicorn
+
 USER hue
 
 EXPOSE 8888

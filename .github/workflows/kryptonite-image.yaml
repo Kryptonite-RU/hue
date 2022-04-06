@@ -48,7 +48,6 @@ jobs:
 
           export PYTHON_VER=python3.8
           make apps
-          pip3 install --isolated mozilla_django_oidc gevent greenlet==1.0.0 py4j gunicorn
 
 #      - name: run tests
 #        run: |
