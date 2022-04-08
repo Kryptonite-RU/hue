@@ -174,6 +174,7 @@ class S3FileSystem(object):
   def _get_key(self, path, validate=True):
     bucket_name, key_name = s3.parse_uri(path)[:2]
     bucket = self._get_bucket(bucket_name)
+    LOG.info('=== Bucket: %s === Path: %s === Key_name: %s ===' % (bucket, path, key_name))
     try:
       return bucket.get_key(key_name, validate=validate)
     except BotoClientError as e:
@@ -465,6 +466,7 @@ class S3FileSystem(object):
       cut = len(src_key)
       if not src_key.endswith('/'):
         cut += 1
+
 
     for key in src_bucket.list(prefix=src_key):
       if not key.name.startswith(src_key):
