@@ -174,7 +174,6 @@ class S3FileSystem(object):
   def _get_key(self, path, validate=True):
     bucket_name, key_name = s3.parse_uri(path)[:2]
     bucket = self._get_bucket(bucket_name)
-    LOG.info('=== Bucket: %s === Path: %s === Key_name: %s ===' % (bucket, path, key_name))
     try:
       return bucket.get_key(key_name, validate=validate)
     except BotoClientError as e:
@@ -467,15 +466,20 @@ class S3FileSystem(object):
       if not src_key.endswith('/'):
         cut += 1
 
+    if src_key.endswith('/'):
+      for key in src_bucket.list(prefix=src_key):
+        if not key.name.startswith(src_key):
+          raise S3FileSystemException(_("Invalid key to transform: %s") % key.name)
+        dst_name = posixpath.normpath(s3.join(dst_key, key.name[cut:]))
 
-    for key in src_bucket.list(prefix=src_key):
-      if not key.name.startswith(src_key):
-        raise S3FileSystemException(_("Invalid key to transform: %s") % key.name)
+        if self.isdir(normpath(self.join(S3A_ROOT, key.bucket.name, key.name))):
+          dst_name = self._append_separator(dst_name)
+
+        key.copy(dst_bucket, dst_name)
+    else:
+      path = normpath(src)
+      key = self._get_key(path, validate=True)
       dst_name = posixpath.normpath(s3.join(dst_key, key.name[cut:]))
-
-      if self.isdir(normpath(self.join(S3A_ROOT, key.bucket.name, key.name))):
-        dst_name = self._append_separator(dst_name)
-
       key.copy(dst_bucket, dst_name)
 
   @translate_s3_error

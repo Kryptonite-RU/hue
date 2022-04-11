@@ -32,7 +32,7 @@ from hadoop.core_site import get_raz_s3_default_bucket
 LOG = logging.getLogger(__name__)
 
 
-HTTP_SOCKET_TIMEOUT_S = 5
+HTTP_SOCKET_TIMEOUT_S = 60
 
 
 def get_credential_provider(identifier, user):
