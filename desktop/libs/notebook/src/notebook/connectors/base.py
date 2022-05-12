@@ -297,7 +297,12 @@ class Notebook(object):
     snippet = notebook_data['snippets'][0]
     snippet['wasBatchExecuted'] = batch
 
-    return _execute_notebook(request, notebook_data, snippet)
+    result = _execute_notebook(request, notebook_data, snippet)
+
+    # TODO: позволяет избежать ошибки получения статуса и закрытия сессии
+    time.sleep(0.5)
+
+    return result
 
 
   def execute_and_wait(self, request, timeout_sec=30.0, sleep_interval=1, include_results=False):

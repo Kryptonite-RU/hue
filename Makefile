@@ -266,6 +266,7 @@ npm-install:
 
 .PHONY: create-static
 create-static:
+	./build/env/bin/pip3 install debugpy
 	./build/env/bin/hue collectstatic --noinput
 
 # <<<< DEV ONLY
