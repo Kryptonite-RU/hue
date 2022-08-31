@@ -111,8 +111,13 @@ def create_session(request):
   session = json.loads(request.POST.get('session', '{}'))
 
   properties = session.get('properties', [])
+  api = get_api(request, session)
 
-  response['session'] = get_api(request, session).create_session(lang=session['type'], properties=properties)
+  if type(api.api) is HS2Api:
+    session = api.create_session(lang=session['type'], properties=properties, request=request)
+  else:
+    session = api.create_session(lang=session['type'], properties=properties)
+  response['session'] = session
   response['status'] = 0
 
   return JsonResponse(response)
@@ -126,7 +131,13 @@ def close_session(request):
 
   session = json.loads(request.POST.get('session', '{}'))
 
-  response['session'] = get_api(request, {'type': session['type']}).close_session(session=session)
+  api = get_api(request, {'type': session['type']})
+
+  if type(api.api) is HS2Api:
+    session = api.close_session(session=session, request=request)
+  else:
+    session = api.close_session(session=session)
+  response['session'] = session
   response['status'] = 0
 
   return JsonResponse(response)
@@ -158,7 +169,10 @@ def _execute_notebook(request, notebook, snippet):
         # interpreter.execute needs the sessions, but we don't want to persist them
         pre_execute_sessions = notebook['sessions']
         notebook['sessions'] = sessions
-        response['handle'] = interpreter.execute(notebook, snippet)
+        if type(interpreter.api) is HS2Api:
+          response['handle'] = interpreter.execute(notebook, snippet, request=request)
+        else:
+          response['handle'] = interpreter.execute(notebook, snippet)
         notebook['sessions'] = pre_execute_sessions
 
       # Retrieve and remove the result from the handle
@@ -271,7 +285,11 @@ def _check_status(request, notebook=None, snippet=None, operation_id=None):
     snippet = notebook['snippets'][0]
 
   try:
-    response['query_status'] = get_api(request, snippet).check_status(notebook, snippet)
+    api = get_api(request, snippet)
+    if type(api.api) is HS2Api:
+      response['query_status'] = api.check_status(notebook, snippet, request=request)
+    else:
+      response['query_status'] = api.check_status(notebook, snippet)
     response['status'] = 0
   except SessionExpired:
     response['status'] = 'expired'
@@ -334,8 +352,13 @@ def fetch_result_data(request):
 def _fetch_result_data(request, notebook=None, snippet=None, operation_id=None, rows=100, start_over=False, nulls_only=False):
   snippet = _get_snippet(request.user, notebook, snippet, operation_id)
 
+  api = get_api(request, snippet)
+  if type(api.api) is HS2Api:
+    res = api.fetch_result(notebook, snippet, rows, start_over, request=request)
+  else:
+    res = api.fetch_result(notebook, snippet, rows, start_over)
   response = {
-    'result': get_api(request, snippet).fetch_result(notebook, snippet, rows, start_over)
+    'result': res
   }
 
   # Materialize and HTML escape results
@@ -359,7 +382,11 @@ def fetch_result_metadata(request):
   snippet = _get_snippet(request.user, notebook, snippet, operation_id)
 
   with opentracing.tracer.start_span('notebook-fetch_result_metadata') as span:
-    response['result'] = get_api(request, snippet).fetch_result_metadata(notebook, snippet)
+    api = get_api(request, snippet)
+    if type(api.api) is HS2Api:
+      response['result'] = api.fetch_result_metadata(notebook, snippet, request=request)
+    else:
+      response['result'] = api.fetch_result_metadata(notebook, snippet)
 
     span.set_tag('user-id', request.user.username)
     span.set_tag(
@@ -386,7 +413,9 @@ def fetch_result_size(request):
   snippet = _get_snippet(request.user, notebook, snippet, operation_id)
 
   with opentracing.tracer.start_span('notebook-fetch_result_size') as span:
-    response['result'] = get_api(request, snippet).fetch_result_size(notebook, snippet)
+
+    api = get_api(request, snippet)
+    response['result'] = api.fetch_result_size(notebook, snippet)
 
     span.set_tag('user-id', request.user.username)
     span.set_tag(
@@ -412,7 +441,11 @@ def cancel_statement(request):
   snippet = _get_snippet(request.user, notebook, snippet, operation_id)
 
   with opentracing.tracer.start_span('notebook-cancel_statement') as span:
-    response['result'] = get_api(request, snippet).cancel(notebook, snippet)
+    api = get_api(request, snippet)
+    if type(api.api) is HS2Api:
+      response['result'] = api.cancel(notebook, snippet, request=request)
+    else:
+      response['result'] = api.cancel(notebook, snippet)
 
     span.set_tag('user-id', request.user.username)
     span.set_tag(
@@ -696,9 +729,15 @@ def close_notebook(request):
     try:
       api = get_api(request, session)
       if hasattr(api, 'close_session_idle'):
-        response['result'].append(api.close_session_idle(notebook, session))
+        if type(api.api) is HS2Api:
+          response['result'].append(api.close_session_idle(notebook, session, request=request))
+        else:
+          response['result'].append(api.close_session_idle(notebook, session))
       else:
-        response['result'].append(api.close_session(session))
+        if type(api.api) is HS2Api:
+          response['result'].append(api.close_session(session, request=request))
+        else:
+          response['result'].append(api.close_session(session))
     except QueryExpired:
       pass
     except Exception as e:
@@ -723,7 +762,11 @@ def close_statement(request):
     snippet = _get_snippet(request.user, notebook, snippet, operation_id)
 
     with opentracing.tracer.start_span('notebook-close_statement') as span:
-      response['result'] = get_api(request, snippet).close_statement(notebook, snippet)
+      api = get_api(request, snippet)
+      if type(api.api) is HS2Api:
+        response['result'] = api.close_statement(notebook, snippet, request=request)
+      else:
+        response['result'] = api.close_statement(notebook, snippet)
 
       span.set_tag('user-id', request.user.username)
       span.set_tag(
@@ -754,7 +797,11 @@ def autocomplete(request, server=None, database=None, table=None, column=None, n
   action = request.POST.get('operation', 'schema')
 
   try:
-    autocomplete_data = get_api(request, snippet).autocomplete(snippet, database, table, column, nested, action)
+    api = get_api(request, snippet)
+    if type(api.api) is HS2Api:
+      autocomplete_data = api.autocomplete(snippet, database, table, column, nested, action, request=request)
+    else:
+      autocomplete_data = api.autocomplete(snippet, database, table, column, nested, action)
     response.update(autocomplete_data)
   except QueryExpired as e:
     LOG.warning('Expired query seen: %s' % e)
@@ -776,7 +823,11 @@ def get_sample_data(request, server=None, database=None, table=None, column=None
   is_async = json.loads(request.POST.get('async', 'false'))
   operation = json.loads(request.POST.get('operation', '"default"'))
 
-  sample_data = get_api(request, snippet).get_sample_data(snippet, database, table, column, is_async=is_async, operation=operation)
+  api = get_api(request, snippet)
+  if type(api.api) is HS2Api:
+    sample_data = api.get_sample_data(snippet, database, table, column, is_async=is_async, operation=operation, request=request)
+  else:
+    sample_data = api.get_sample_data(snippet, database, table, column, is_async=is_async, operation=operation)
   response.update(sample_data)
 
   response['status'] = 0
@@ -793,7 +844,12 @@ def explain(request):
   notebook = json.loads(request.POST.get('notebook', '{}'))
   snippet = json.loads(request.POST.get('snippet', '{}'))
 
-  response = get_api(request, snippet).explain(notebook, snippet)
+  api = get_api(request, snippet)
+  if type(api.api) is HS2Api:
+    response = api.explain(notebook, snippet, request=request)
+  else:
+    response = api.explain(notebook, snippet)
+
 
   return JsonResponse(response)
 
@@ -834,7 +890,10 @@ def export_result(request):
         destination += '/%(type)s-%(id)s.csv' % notebook
     if overwrite and request.fs.exists(destination):
       request.fs.do_as_user(request.user.username, request.fs.rmtree, destination)
-    response['watch_url'] = api.export_data_as_hdfs_file(snippet, destination, overwrite)
+    if type(api.api) is HS2Api:
+      response['watch_url'] = api.export_data_as_hdfs_file(snippet, destination, overwrite, request=request)
+    else:
+      response['watch_url'] = api.export_data_as_hdfs_file(snippet, destination, overwrite)
     response['status'] = 0
     request.audit = {
       'operation': 'EXPORT',
@@ -843,8 +902,10 @@ def export_result(request):
     }
   elif data_format == 'hive-table':
     if is_embedded:
-      sql, success_url = api.export_data_as_table(notebook, snippet, destination)
-
+      if type(api.api) is HS2Api:
+        sql, success_url = api.export_data_as_table(notebook, snippet, destination, request=request)
+      else:
+        sql, success_url = api.export_data_as_table(notebook, snippet, destination)
       task = make_notebook(
         name=_('Export %s query to table %s') % (snippet['type'], destination),
         description=_('Query %s to %s') % (_get_snippet_name(notebook), success_url),
@@ -873,7 +934,10 @@ def export_result(request):
     if request.fs.exists(destination) and request.fs.listdir_stats(destination):
       raise PopupException(_('The destination is not an empty directory!'))
     if is_embedded:
-      sql, success_url = api.export_large_data_to_hdfs(notebook, snippet, destination)
+      if type(api.api) is HS2Api:
+        sql, success_url = api.export_large_data_to_hdfs(notebook, snippet, destination, request=request)
+      else:
+        sql, success_url = api.export_large_data_to_hdfs(notebook, snippet, destination)
 
       task = make_notebook(
         name=_('Export %s query to directory') % snippet['type'],
@@ -910,7 +974,11 @@ def export_result(request):
         ) + '?source=query&engine=%(engine)s' % {'engine': engine}
         response['status'] = 0
       else:
-        sample = get_api(request, snippet).fetch_result(notebook, snippet, rows=4, start_over=True)
+        api = get_api(request, snippet)
+        if type(api.api) is HS2Api:
+          sample = api.fetch_result(notebook, snippet, rows=4, start_over=True, request=request)
+        else:
+          sample = api.fetch_result(notebook, snippet, rows=4, start_over=True)
         for col in sample['meta']:
           col['type'] = HiveFormat.FIELD_TYPE_TRANSLATE.get(col['type'], 'string')
 
@@ -1038,7 +1106,7 @@ def describe(request, database, table=None, column=None):
   snippet = {'type': source_type, 'connector': connector}
   patch_snippet_for_connector(snippet)
 
-  describe = get_api(request, snippet).describe(notebook, snippet, database, table, column=column)
+  describe = get_api(request, snippet).describe(notebook, snippet, database, table, column=column, request=request)
   response.update(describe)
 
   return JsonResponse(response)

@@ -104,11 +104,12 @@ def autocomplete(request, database=None, table=None, column=None, nested=None):
 
   db = _get_db(user=do_as, source_type=app_name, cluster=cluster)
 
-  response = _autocomplete(db, database, table, column, nested, cluster=cluster)
+  response = _autocomplete(db, database, table, column, nested, cluster=cluster, request=request)
   return JsonResponse(response)
 
 
-def _autocomplete(db, database=None, table=None, column=None, nested=None, query=None, cluster=None, operation='schema'):
+def _autocomplete(db, database=None, table=None, column=None, nested=None, query=None, cluster=None, operation='schema',
+                  request=None):
   response = {}
 
   try:
@@ -133,7 +134,7 @@ def _autocomplete(db, database=None, table=None, column=None, nested=None, query
 
       if table.is_impala_only: # Expand Kudu table information
         if db.client.query_server['dialect'] != 'impala':
-          query_server = get_query_server_config('impala', connector=cluster)
+          query_server = get_query_server_config('impala', connector=cluster, request=request)
           db = dbms.get(db.client.user, query_server, cluster=cluster)
 
         col_options = db.get_table_describe(database, table.name) # Expand columns information
@@ -277,7 +278,7 @@ def execute_directly(request, query, design, query_server, tablename=None, **kwa
 @error_handler
 def watch_query_refresh_json(request, id):
   query_history = authorized_get_query_history(request, id, must_exist=True)
-  db = dbms.get(request.user, query_history.get_query_server_config())
+  db = dbms.get(request.user, query_history.get_query_server_config(request=request))
 
   if not request.POST.get('next'): # We need this as multi query would fail as current query is closed
     handle, state = _get_query_handle_and_state(query_history)
@@ -353,7 +354,7 @@ def close_operation(request, query_history_id):
     response['message'] = _('A POST request is required.')
   else:
     query_history = authorized_get_query_history(request, query_history_id, must_exist=True)
-    db = dbms.get(query_history.owner, query_history.get_query_server_config())
+    db = dbms.get(query_history.owner, query_history.get_query_server_config(request=request))
     handle = query_history.get_handle()
     db.close_operation(handle)
     query_history.set_to_expired()
@@ -384,7 +385,7 @@ def execute(request, design_id=None):
     response['message'] = _('A POST request is required.')
 
   app_name = get_app_name(request)
-  query_server = get_query_server_config(app_name)
+  query_server = get_query_server_config(app_name, request=request)
   query_type = beeswax.models.SavedQuery.TYPES_MAPPING[app_name]
   design = safe_get_design(request, query_type, design_id)
 
@@ -512,7 +513,7 @@ def cancel_query(request, query_history_id):
   else:
     try:
       query_history = authorized_get_query_history(request, query_history_id, must_exist=True)
-      db = dbms.get(request.user, query_history.get_query_server_config())
+      db = dbms.get(request.user, query_history.get_query_server_config(request=request))
       db.cancel_operation(query_history.get_handle())
       query_history.set_to_expired()
       response['status'] = 0
@@ -544,7 +545,7 @@ def save_results_hdfs_directory(request, query_history_id):
       response['status'] = -1
       return JsonResponse(response)
 
-    db = dbms.get(request.user, query_history.get_query_server_config())
+    db = dbms.get(request.user, query_history.get_query_server_config(request=request))
 
     form = beeswax.forms.SaveResultsDirectoryForm({
       'target_dir': request.POST.get('path')
@@ -593,7 +594,7 @@ def save_results_hdfs_file(request, query_history_id):
       response['status'] = -1
       return JsonResponse(response)
 
-    db = dbms.get(request.user, query_history.get_query_server_config())
+    db = dbms.get(request.user, query_history.get_query_server_config(request=request))
 
     form = beeswax.forms.SaveResultsFileForm({
       'target_file': request.POST.get('path'),
@@ -659,7 +660,7 @@ def save_results_hive_table(request, query_history_id):
       response['status'] = -1
       return JsonResponse(response)
 
-    db = dbms.get(request.user, query_history.get_query_server_config())
+    db = dbms.get(request.user, query_history.get_query_server_config(request=request))
     database = query_history.design.get_design().query.get('database', 'default')
     form = beeswax.forms.SaveResultsTableForm({
       'target_table': request.POST.get('table')
@@ -717,7 +718,7 @@ def get_sample_data(request, database, table, column=None):
   app_name = get_app_name(request)
   cluster = json.loads(request.POST.get('cluster', '{}'))
 
-  query_server = get_query_server_config(app_name, connector=cluster)
+  query_server = get_query_server_config(app_name, connector=cluster, request=request)
   db = dbms.get(request.user, query_server)
 
   response = _get_sample_data(db, database, table, column, cluster=cluster)
@@ -768,7 +769,7 @@ def _get_sample_data(db, database, table, column, is_async=False, cluster=None, 
 
 @error_handler
 def get_indexes(request, database, table):
-  query_server = dbms.get_query_server_config(get_app_name(request))
+  query_server = dbms.get_query_server_config(get_app_name(request), request=request)
   db = dbms.get(request.user, query_server)
   response = {'status': -1}
 
@@ -785,7 +786,7 @@ def get_indexes(request, database, table):
 
 @error_handler
 def get_settings(request):
-  query_server = dbms.get_query_server_config(get_app_name(request))
+  query_server = dbms.get_query_server_config(get_app_name(request), request=request)
   db = dbms.get(request.user, query_server)
   response = {'status': -1}
 
@@ -801,7 +802,7 @@ def get_settings(request):
 
 @error_handler
 def get_functions(request):
-  query_server = dbms.get_query_server_config(get_app_name(request))
+  query_server = dbms.get_query_server_config(get_app_name(request), request=request)
   db = dbms.get(request.user, query_server)
   response = {'status': -1}
 
@@ -822,12 +823,12 @@ def analyze_table(request, database, table, columns=None):
   app_name = get_app_name(request)
   cluster = json.loads(request.POST.get('cluster', '{}'))
 
-  query_server = get_query_server_config(app_name, connector=cluster)
+  query_server = get_query_server_config(app_name, connector=cluster, request=request)
   db = dbms.get(request.user, query_server)
 
   table_obj = db.get_table(database, table)
   if table_obj.is_impala_only and app_name != 'impala':
-    query_server = get_query_server_config('impala')
+    query_server = get_query_server_config('impala', request=request)
     db = dbms.get(request.user, query_server)
 
   response = {'status': -1, 'message': '', 'redirect': ''}
@@ -851,7 +852,7 @@ def get_table_stats(request, database, table, column=None):
   app_name = get_app_name(request)
   cluster = json.loads(request.POST.get('cluster', '{}'))
 
-  query_server = get_query_server_config(app_name, connector=cluster)
+  query_server = get_query_server_config(app_name, connector=cluster, request=request)
   db = dbms.get(request.user, query_server)
 
   response = {'status': -1, 'message': '', 'redirect': ''}
@@ -874,7 +875,7 @@ def get_top_terms(request, database, table, column, prefix=None):
   app_name = get_app_name(request)
   cluster = json.loads(request.POST.get('cluster', '{}'))
 
-  query_server = get_query_server_config(app_name, connector=cluster)
+  query_server = get_query_server_config(app_name, connector=cluster, request=request)
   db = dbms.get(request.user, query_server)
 
   response = {'status': -1, 'message': '', 'redirect': ''}
@@ -890,7 +891,7 @@ def get_top_terms(request, database, table, column, prefix=None):
 @error_handler
 def get_session(request, session_id=None):
   app_name = get_app_name(request)
-  query_server = get_query_server_config(app_name)
+  query_server = get_query_server_config(app_name, request=request)
 
   response = {'status': -1, 'message': ''}
 
@@ -919,7 +920,7 @@ def get_session(request, session_id=None):
 @error_handler
 def close_session(request, session_id):
   app_name = get_app_name(request)
-  query_server = get_query_server_config(app_name)
+  query_server = get_query_server_config(app_name, request=request)
 
   response = {'status': -1, 'message': ''}
 
@@ -988,7 +989,7 @@ def get_query_form(request):
   try:
     try:
       # Get database choices
-      query_server = dbms.get_query_server_config(get_app_name(request))
+      query_server = dbms.get_query_server_config(get_app_name(request), request=request)
       db = dbms.get(request.user, query_server)
       databases = [(database, database) for database in db.get_databases()]
     except StructuredThriftTransportException as e:

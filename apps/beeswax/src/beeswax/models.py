@@ -123,10 +123,10 @@ class QueryHistory(models.Model):
     else:
       return 'beeswax'
 
-  def get_query_server_config(self):
+  def get_query_server_config(self, request=None):
     from beeswax.server.dbms import get_query_server_config
 
-    query_server = get_query_server_config(QueryHistory.get_type_name(self.query_type))
+    query_server = get_query_server_config(QueryHistory.get_type_name(self.query_type), request=request)
     query_server.update({
         'server_name': self.server_name,
 #         'server_host': self.server_host, # Always use the live server configuration as the session is currently tied to the connection

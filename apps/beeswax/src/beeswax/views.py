@@ -1147,7 +1147,7 @@ def _update_query_state(query_history):
 
 def get_db_choices(request):
   app_name = get_app_name(request)
-  query_server = get_query_server_config(app_name)
+  query_server = get_query_server_config(app_name, request=request)
   db = dbms.get(request.user, query_server)
   dbs = db.get_databases()
   return [(db, db) for db in dbs]
