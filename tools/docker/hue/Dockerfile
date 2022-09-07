@@ -29,7 +29,9 @@ RUN apt-get update -y && apt-get install -y \
 
 ADD . /hue
 
-RUN pip3 install --upgrade --no-cache-dir setuptools virtualenv pip && \
+# some pip dependencies fail with timeout
+RUN export PIP_DEFAULT_TIMEOUT=100 && \
+  pip3 install --upgrade --no-cache-dir setuptools virtualenv pip && \
   curl -sL https://deb.nodesource.com/setup_14.x | sudo bash - && \
   apt-get install -y nodejs && \
   addgroup hue && \
@@ -81,8 +83,9 @@ RUN ./build/env/bin/pip install --no-cache-dir \
   sqlalchemy-clickhouse \
   # sqlalchemy-clickhouse depend on infi.clickhouse_orm
   # install after sqlalchemy-clickhouse and version == 1.0.4
-  # otherwise Code: 516, Authentication failed will display
-  infi.clickhouse_orm==1.0.4
+  # otherwise Code: 516, Authentication failed will display \
+  infi.clickhouse_orm==1.0.4 &&\
+     ./build/env/bin/pip install --force-reinstall protobuf==3.20.0 # force protobuf version because higher versions are not compatible
 
 RUN ./build/env/bin/pip install --no-cache-dir install --isolated mozilla_django_oidc gevent greenlet==1.0.0 py4j gunicorn
 
