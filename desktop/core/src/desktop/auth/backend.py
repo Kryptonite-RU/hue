@@ -836,6 +836,7 @@ class OIDCBackend(OIDCAuthenticationBackend):
     verified_id = self.verify_token(id_token, nonce=nonce)
 
     if verified_id:
+      self.save_access_tokens(access_token) # https://github.com/cloudera/hue/issues/2734
       self.save_refresh_tokens(refresh_token)
       user = self.get_or_create_user(access_token, id_token, verified_id)
       user = rewrite_user(user)
@@ -857,6 +858,12 @@ class OIDCBackend(OIDCAuthenticationBackend):
 
     if import_from_settings('OIDC_STORE_REFRESH_TOKEN', False):
       session['oidc_refresh_token'] = refresh_token
+
+  def save_access_tokens(self, access_token):
+    session = self.request.session
+
+    if import_from_settings('OIDC_STORE_ACCESS_TOKEN', False):
+      session['oidc_access_token'] = access_token
 
   def create_user(self, claims):
     """Return object for a newly created user account."""
@@ -952,9 +959,14 @@ class OIDCBackend(OIDCAuthenticationBackend):
       LOG.warning("OpenID Connect tokens are not available, logout skipped!")
     return None
 
-  # def filter_users_by_claims(self, claims):
+  def verify_claims(self, claims):
+    """Verify the provided claims to decide if authentication should be allowed."""
+    return True
 
-  # def verify_claims(self, claims):
+  # # skip /userinfo call untill arbiter's tokens are fixed
+  def get_userinfo(self, access_token, id_token, verified_id):
+    # use decoded token payload instead of /userinfo call
+    return verified_id
 
 def delete_oidc_session_tokens(session):
   if session:
