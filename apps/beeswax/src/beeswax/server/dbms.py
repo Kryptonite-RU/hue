@@ -136,7 +136,9 @@ def get(user, query_server=None, cluster=None):
         HiveServerClientCompatible(HiveServerClient(query_server, user)),
         QueryHistory.SERVER_TYPE[1][0]
       )
-    return DBMS_CACHE[user.id][query_server['server_name']]
+    dbms = DBMS_CACHE[user.id][query_server['server_name']]
+    dbms.client.query_server = query_server
+    return dbms
   finally:
     DBMS_CACHE_LOCK.release()
 
@@ -285,7 +287,8 @@ def get_query_server_config(name='beeswax', connector=None, request=None):
         }
 
     if name == 'sparksql':  # Extends Hive as very similar
-      from spark.conf import SQL_SERVER_HOST as SPARK_SERVER_HOST, SQL_SERVER_PORT as SPARK_SERVER_PORT, USE_SASL as SPARK_USE_SASL, REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY
+      from spark.conf import SQL_SERVER_HOST as SPARK_SERVER_HOST, SQL_SERVER_PORT as SPARK_SERVER_PORT,\
+        USE_SASL as SPARK_USE_SASL, REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY, USE_DEFAULT_AUTH_NAME_PASSWORD as SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD
 
       query_server.update({
           'server_name': 'sparksql',
@@ -299,6 +302,11 @@ def get_query_server_config(name='beeswax', connector=None, request=None):
       if refresh_token_property:
         assert request is not None
         query_server.update({'SPARK_REFRESH_TOKEN': request.session['oidc_refresh_token']})
+      if not SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD.get():
+        query_server.update({
+          'auth_username': None,
+          'auth_password': None
+        })
 
   if not query_server.get('dialect'):
     query_server['dialect'] = query_server['server_name']
