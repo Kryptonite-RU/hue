@@ -567,7 +567,7 @@ class HS2Api(Api):
   def get_sample_data(self, snippet, database=None, table=None, column=None, is_async=False, operation=None, request=None):
     try:
       db = self._get_db(snippet, is_async=is_async, interpreter=self.interpreter, request=request)
-      return _get_sample_data(db, database, table, column, is_async, operation=operation, cluster=self.interpreter)
+      return _get_sample_data(db, database, table, column, is_async, operation=operation, cluster=self.interpreter, request=request)
     except QueryServerException as ex:
       raise QueryError(ex.message)
 
@@ -768,7 +768,7 @@ DROP TABLE IF EXISTS `%(table)s`;
     table = db.get_table(database, table)
     if table.is_impala_only:
       snippet['type'] = 'impala'
-      db = self._get_db(snippet, interpreter=self.interpreter)
+      db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     if partition_spec is not None:
       decoded_spec = urllib_unquote(partition_spec)

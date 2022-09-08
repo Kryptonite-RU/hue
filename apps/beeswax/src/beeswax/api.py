@@ -102,7 +102,7 @@ def autocomplete(request, database=None, table=None, column=None, nested=None):
   if (is_admin(request.user) or request.user.has_hue_permission(action="impersonate", app="security")) and 'doas' in request.GET:
     do_as = User.objects.get(username=request.GET.get('doas'))
 
-  db = _get_db(user=do_as, source_type=app_name, cluster=cluster)
+  db = _get_db(user=do_as, source_type=app_name, cluster=cluster, request=request)
 
   response = _autocomplete(db, database, table, column, nested, cluster=cluster, request=request)
   return JsonResponse(response)
@@ -164,7 +164,7 @@ def _autocomplete(db, database=None, table=None, column=None, nested=None, query
         response = parse_tree
         # If column or nested type is scalar/primitive, add sample of values
         if parser.is_scalar_type(parse_tree['type']):
-          sample = _get_sample_data(db, database, table, column, cluster=cluster)
+          sample = _get_sample_data(db, database, table, column, cluster=cluster, request=request)
           if 'rows' in sample:
             response['sample'] = sample['rows']
       else:
@@ -721,17 +721,17 @@ def get_sample_data(request, database, table, column=None):
   query_server = get_query_server_config(app_name, connector=cluster, request=request)
   db = dbms.get(request.user, query_server)
 
-  response = _get_sample_data(db, database, table, column, cluster=cluster)
+  response = _get_sample_data(db, database, table, column, cluster=cluster, request=request)
   return JsonResponse(response)
 
 
-def _get_sample_data(db, database, table, column, is_async=False, cluster=None, operation=None):
+def _get_sample_data(db, database, table, column, is_async=False, cluster=None, operation=None, request=None):
   if operation == 'hello':
     table_obj = None
   else:
     table_obj = db.get_table(database, table)
     if table_obj.is_impala_only and db.client.query_server['server_name'] != 'impala':  # Kudu table, now Hive should support it though
-      query_server = get_query_server_config('impala', connector=cluster)
+      query_server = get_query_server_config('impala', connector=cluster, request=request)
       db = dbms.get(db.client.user, query_server, cluster=cluster)
 
   sample_data = db.get_sample(database, table_obj, column, generate_sql_only=is_async, operation=operation)
@@ -749,7 +749,8 @@ def _get_sample_data(db, database, table, column, is_async=False, cluster=None, 
           is_task=False,
           compute=cluster if cluster else None
       )
-      response['result'] = notebook.execute(request=MockedDjangoRequest(user=db.client.user), batch=False)
+      req = request if request is not None else MockedDjangoRequest(user=db.client.user)
+      response['result'] = notebook.execute(request=req, batch=False)
       if table_obj.is_impala_only:
         response['result']['type'] = 'impala'
     else:
