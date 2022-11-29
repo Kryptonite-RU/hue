@@ -112,6 +112,12 @@ USE_DEFAULT_AUTH_NAME_PASSWORD = Config(
   type=coerce_bool
 )
 
+SET_PROXY_USER = Config(
+  key="set_proxy_user",
+  default=True,
+  type=coerce_bool
+)
+
 
 def get_livy_server_url():
   url = LIVY_SERVER_URL.get()

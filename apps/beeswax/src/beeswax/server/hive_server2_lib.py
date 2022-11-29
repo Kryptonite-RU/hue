@@ -31,7 +31,7 @@ from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,
 
 from desktop.lib import python_util, thrift_util
 from desktop.conf import DEFAULT_USER, USE_THRIFT_HTTP_JWT
-from spark.conf import REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY
+from spark.conf import REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY, SET_PROXY_USER as SPARK_SET_PROXY_USER
 
 from beeswax import conf as beeswax_conf, hive_site
 from beeswax.hive_site import hiveserver2_use_ssl
@@ -685,7 +685,7 @@ class HiveServerClient(object):
     if self.query_server['server_name'] == 'llap': # All the time
       kwargs['configuration'].update({'hive.server2.proxy.user': user.username})
 
-    if self.query_server['server_name'] == 'sparksql': # All the time
+    if self.query_server['server_name'] == 'sparksql' and SPARK_SET_PROXY_USER.get(): # All the time
       kwargs['configuration'].update({'hive.server2.proxy.user': user.username})
 
     if self.query_server.get('dialect') == 'impala' and self.query_server['SESSION_TIMEOUT_S'] > 0:
