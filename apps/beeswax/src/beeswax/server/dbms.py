@@ -104,6 +104,9 @@ def get(user, query_server=None, cluster=None):
   try:
     DBMS_CACHE.setdefault(user.id, {})
 
+    # a new refresh token could be pass in query_server that's why we remove data
+    DBMS_CACHE[user.id].pop(query_server['server_name'], '')
+
     if query_server['server_name'] not in DBMS_CACHE[user.id]:
       # Avoid circular dependency
       from beeswax.server.hive_server2_lib import HiveServerClientCompatible
