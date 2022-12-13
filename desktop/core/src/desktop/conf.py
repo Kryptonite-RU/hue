@@ -1626,6 +1626,13 @@ OIDC = ConfigSection(
       type=str,
       default=""
     ),
+
+    OIDC_RP_SCOPES=Config(
+      key="oidc_rp_scopes",
+      help=_("Client scopes."),
+      type=str,
+      default="openid email"
+    ),
   )
 )
 

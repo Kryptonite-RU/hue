@@ -621,9 +621,12 @@ class Api(object):
 
     return client.similar_queries(source_platform, query)
 
-  def describe(self, notebook, snippet, database=None, table=None, column=None):
+  def describe(self, notebook, snippet, database=None, table=None, column=None, request=None):
     if column:
-      response = self.describe_column(notebook, snippet, database=database, table=table, column=column)
+      if request is None:
+        response = self.describe_table(notebook, snippet, database, table)
+      else:
+        response = self.describe_table(notebook, snippet, database, table, request=request)
     elif table:
       response = {
           'status': 0,
@@ -638,7 +641,10 @@ class Api(object):
           'details': {'properties': {'table_type': ''}, 'stats': {}},
           'stats': []
       }
-      describe_table = self.describe_table(notebook, snippet, database, table)
+      if request is None:
+        describe_table = self.describe_table(notebook, snippet, database, table)
+      else:
+        describe_table = self.describe_table(notebook, snippet, database, table, request=request)
       response.update(describe_table)
     else:
       response = {
@@ -649,20 +655,23 @@ class Api(object):
         'hdfs_link': '',
         'message': ''
       }
-      describe_database = self.describe_database(notebook, snippet, database)
+      if request is None:
+        describe_database = self.describe_database(notebook, snippet, database)
+      else:
+        describe_database = self.describe_database(notebook, snippet, database, request=request)
       response.update(describe_database)
     return response
 
-  def describe_column(self, notebook, snippet, database=None, table=None, column=None):
+  def describe_column(self, notebook, snippet, database=None, table=None, column=None, request=None):
     return []
 
-  def describe_table(self, notebook, snippet, database=None, table=None):
+  def describe_table(self, notebook, snippet, database=None, table=None, request=None):
     response = {}
     autocomplete = self.autocomplete(snippet, database=database, table=table)
     response['cols'] = autocomplete['extended_columns'] if autocomplete and autocomplete.get('extended_columns') else [],
     return response
 
-  def describe_database(self, notebook, snippet, database=None):
+  def describe_database(self, notebook, snippet, database=None, request=None):
     return {}
 
   def close_statement(self, notebook, snippet): pass

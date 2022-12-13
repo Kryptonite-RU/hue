@@ -180,7 +180,7 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def create_session(self, lang='hive', properties=None):
+  def create_session(self, lang='hive', properties=None, request=None):
     application = 'beeswax' if lang == 'hive' or lang == 'llap' else lang
 
     try:
@@ -198,7 +198,7 @@ class HS2Api(Api):
         
     reuse_session = session is not None
     if not reuse_session:
-      db = dbms.get(self.user, query_server=get_query_server_config(name=lang, connector=self.interpreter))
+      db = dbms.get(self.user, query_server=get_query_server_config(name=lang, connector=self.interpreter, request=request))
       try:
         session = db.open_session(self.user)
       except Exception as e:
@@ -240,7 +240,7 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def close_session(self, session):
+  def close_session(self, session, request=None):
     app_name = session.get('type')
     session_id = session.get('id')
     source_method = session.get("sourceMethod")
@@ -249,10 +249,11 @@ class HS2Api(Api):
       session = Session.objects.get_session(self.user, application=app_name)
       decoded_guid = session.get_handle().sessionId.guid
       session_decoded_id = unpack_guid(decoded_guid)
+      session_id = session.id
       if source_method == "dt_logout":
-        LOG.debug("Closing Impala session id %s on logout for user %s" % (session_decoded_id, self.user.username))
+        LOG.info("Closing %s session guid %s on logout for user %s" % (app_name, session_decoded_id, self.user.username))
 
-    query_server = get_query_server_config(name=app_name)
+    query_server = get_query_server_config(name=app_name, request=request)
 
     response = {'status': -1, 'message': ''}
     session_record = None
@@ -274,13 +275,13 @@ class HS2Api(Api):
     return response
 
 
-  def close_session_idle(self, notebook, session):
+  def close_session_idle(self, notebook, session, request=None):
     idle = True
     response = {'result': []}
     for snippet in [_s for _s in notebook['snippets'] if _s['type'] == session['type']]:
       try:
         if snippet['status'] != 'running':
-          response['result'].append(self.close_statement(notebook, snippet))
+          response['result'].append(self.close_statement(notebook, snippet, request=request))
         else:
           idle = False
           LOG.info('Not closing SQL snippet as still running.')
@@ -291,7 +292,7 @@ class HS2Api(Api):
 
     try:
       if idle and CLOSE_SESSIONS.get():
-        response['result'].append(self.close_session(session))
+        response['result'].append(self.close_session(session, request=request))
     except QueryExpired:
       pass
     except Exception as e:
@@ -300,8 +301,8 @@ class HS2Api(Api):
     return response['result']
 
   @query_error_handler
-  def execute(self, notebook, snippet):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def execute(self, notebook, snippet, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     statement = self._get_current_statement(notebook, snippet)
     session = self._get_session(notebook, snippet['type'])
@@ -342,9 +343,9 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def check_status(self, notebook, snippet):
+  def check_status(self, notebook, snippet, request=None):
     response = {}
-    db = self._get_db(snippet, interpreter=self.interpreter)
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     handle = self._get_handle(snippet)
     operation = db.get_operation_status(handle)
@@ -370,8 +371,8 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def fetch_result(self, notebook, snippet, rows, start_over):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def fetch_result(self, notebook, snippet, rows, start_over, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     handle = self._get_handle(snippet)
     try:
@@ -426,8 +427,8 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def cancel(self, notebook, snippet):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def cancel(self, notebook, snippet, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     handle = self._get_handle(snippet)
     db.cancel_operation(handle)
@@ -435,16 +436,16 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def get_log(self, notebook, snippet, startFrom=None, size=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def get_log(self, notebook, snippet, startFrom=None, size=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     handle = self._get_handle(snippet)
     return db.get_log(handle, start_over=startFrom == 0)
 
 
   @query_error_handler
-  def close_statement(self, notebook, snippet):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def close_statement(self, notebook, snippet, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     try:
       handle = self._get_handle(snippet)
@@ -457,9 +458,9 @@ class HS2Api(Api):
     return {'status': 0}
 
 
-  def can_start_over(self, notebook, snippet):
+  def can_start_over(self, notebook, snippet, request=None):
     try:
-      db = self._get_db(snippet, interpreter=self.interpreter)
+      db = self._get_db(snippet, interpreter=self.interpreter, request=request)
       handle = self._get_handle(snippet)
       # Test handle to verify if still valid
       db.fetch(handle, start_over=True, rows=1)
@@ -538,8 +539,8 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def autocomplete(self, snippet, database=None, table=None, column=None, nested=None, operation=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def autocomplete(self, snippet, database=None, table=None, column=None, nested=None, operation=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     query = None
 
     if snippet.get('query'):
@@ -563,17 +564,17 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def get_sample_data(self, snippet, database=None, table=None, column=None, is_async=False, operation=None):
+  def get_sample_data(self, snippet, database=None, table=None, column=None, is_async=False, operation=None, request=None):
     try:
-      db = self._get_db(snippet, is_async=is_async, interpreter=self.interpreter)
+      db = self._get_db(snippet, is_async=is_async, interpreter=self.interpreter, request=request)
       return _get_sample_data(db, database, table, column, is_async, operation=operation, cluster=self.interpreter)
     except QueryServerException as ex:
       raise QueryError(ex.message)
 
 
   @query_error_handler
-  def explain(self, notebook, snippet):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def explain(self, notebook, snippet, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     response = self._get_current_statement(notebook, snippet)
     session = self._get_session(notebook, snippet['type'])
 
@@ -599,8 +600,8 @@ class HS2Api(Api):
 
 
   @query_error_handler
-  def export_data_as_hdfs_file(self, snippet, target_file, overwrite):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def export_data_as_hdfs_file(self, snippet, target_file, overwrite, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     handle = self._get_handle(snippet)
     max_rows = DOWNLOAD_ROW_LIMIT.get()
@@ -613,8 +614,8 @@ class HS2Api(Api):
     ) # Quote twice, because of issue in the routing on client
 
 
-  def export_data_as_table(self, notebook, snippet, destination, is_temporary=False, location=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def export_data_as_table(self, notebook, snippet, destination, is_temporary=False, location=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
 
     response = self._get_current_statement(notebook, snippet)
     session = self._get_session(notebook, snippet['type'])
@@ -762,8 +763,8 @@ DROP TABLE IF EXISTS `%(table)s`;
     )
 
 
-  def get_browse_query(self, snippet, database, table, partition_spec=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def get_browse_query(self, snippet, database, table, partition_spec=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     table = db.get_table(database, table)
     if table.is_impala_only:
       snippet['type'] = 'impala'
@@ -792,7 +793,7 @@ DROP TABLE IF EXISTS `%(table)s`;
     return HiveServerQueryHandle(**handle)
 
 
-  def _get_db(self, snippet, is_async=False, interpreter=None):
+  def _get_db(self, snippet, is_async=False, interpreter=None, request=None):
     if interpreter and interpreter.get('dialect'):
       dialect = interpreter['dialect']
     else:
@@ -812,7 +813,7 @@ DROP TABLE IF EXISTS `%(table)s`;
       name = 'sparksql'
 
     # Note: name is not used if interpreter is present
-    return dbms.get(self.user, query_server=get_query_server_config(name=name, connector=interpreter))
+    return dbms.get(self.user, query_server=get_query_server_config(name=name, connector=interpreter, request=request))
 
 
   def _parse_job_counters(self, job_id):
@@ -937,13 +938,13 @@ DROP TABLE IF EXISTS `%(table)s`;
     return query_plan_match.group() if query_plan_match else None
 
 
-  def describe_column(self, notebook, snippet, database=None, table=None, column=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def describe_column(self, notebook, snippet, database=None, table=None, column=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     return db.get_table_columns_stats(database, table, column)
 
 
-  def describe_table(self, notebook, snippet, database=None, table=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def describe_table(self, notebook, snippet, database=None, table=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     tb = db.get_table(database, table)
 
     return {
@@ -961,8 +962,8 @@ DROP TABLE IF EXISTS `%(table)s`;
       'stats': tb.stats
     }
 
-  def describe_database(self, notebook, snippet, database=None):
-    db = self._get_db(snippet, interpreter=self.interpreter)
+  def describe_database(self, notebook, snippet, database=None, request=None):
+    db = self._get_db(snippet, interpreter=self.interpreter, request=request)
     return db.get_database(database)
 
   def get_log_is_full_log(self, notebook, snippet):

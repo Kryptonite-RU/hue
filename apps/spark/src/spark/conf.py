@@ -100,6 +100,18 @@ USE_SASL = Config(
   type=coerce_bool
 )
 
+REFRESH_TOKEN_PROPERTY = Config(
+  key="refresh_token_property",
+  help=_t("Property that will be used to pass token to Thrift Server. Token won't be passed if not set."),
+)
+
+USE_DEFAULT_AUTH_NAME_PASSWORD = Config(
+  key="use_default_auth_name_password",
+  help=_t("open client with default name and password"),
+  default=True,
+  type=coerce_bool
+)
+
 
 def get_livy_server_url():
   url = LIVY_SERVER_URL.get()

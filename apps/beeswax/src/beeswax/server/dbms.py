@@ -104,6 +104,9 @@ def get(user, query_server=None, cluster=None):
   try:
     DBMS_CACHE.setdefault(user.id, {})
 
+    # a new refresh token could be pass in query_server that's why we remove data
+    DBMS_CACHE[user.id].pop(query_server['server_name'], '')
+
     if query_server['server_name'] not in DBMS_CACHE[user.id]:
       # Avoid circular dependency
       from beeswax.server.hive_server2_lib import HiveServerClientCompatible
@@ -141,7 +144,7 @@ def get(user, query_server=None, cluster=None):
     DBMS_CACHE_LOCK.release()
 
 
-def get_query_server_config(name='beeswax', connector=None):
+def get_query_server_config(name='beeswax', connector=None, request=None):
   if connector and has_connectors(): # TODO: Give empty connector when no connector in use
     LOG.debug("Query via connector %s" % name)
     query_server = get_query_server_config_via_connector(connector)
@@ -285,7 +288,8 @@ def get_query_server_config(name='beeswax', connector=None):
         }
 
     if name == 'sparksql':  # Extends Hive as very similar
-      from spark.conf import SQL_SERVER_HOST as SPARK_SERVER_HOST, SQL_SERVER_PORT as SPARK_SERVER_PORT, USE_SASL as SPARK_USE_SASL
+      from spark.conf import SQL_SERVER_HOST as SPARK_SERVER_HOST, SQL_SERVER_PORT as SPARK_SERVER_PORT,\
+        USE_SASL as SPARK_USE_SASL, REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY, USE_DEFAULT_AUTH_NAME_PASSWORD as SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD
 
       query_server.update({
           'server_name': 'sparksql',
@@ -293,6 +297,17 @@ def get_query_server_config(name='beeswax', connector=None):
           'server_port': SPARK_SERVER_PORT.get(),
           'use_sasl': SPARK_USE_SASL.get()
       })
+
+      refresh_token_property = SPARK_REFRESH_TOKEN_PROPERTY.get()
+      LOG.info('refresh_token_property %s' % str(refresh_token_property))
+      if refresh_token_property:
+        assert request is not None
+        query_server.update({'SPARK_REFRESH_TOKEN': request.session['oidc_refresh_token']})
+      if not SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD.get():
+        query_server.update({
+          'auth_username': None,
+          'auth_password': None
+        })
 
   if not query_server.get('dialect'):
     query_server['dialect'] = query_server['server_name']

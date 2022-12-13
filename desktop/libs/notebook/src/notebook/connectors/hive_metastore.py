@@ -78,5 +78,5 @@ class HiveMetastoreApi(Api):
     return []
 
 
-  def _get_db(self, snippet, is_async=False, cluster=None):
-    return dbms.get(self.user, query_server=get_query_server_config(name='hms', cluster=cluster))
+  def _get_db(self, snippet, is_async=False, cluster=None, request=None):
+    return dbms.get(self.user, query_server=get_query_server_config(name='hms', cluster=cluster, request=request))

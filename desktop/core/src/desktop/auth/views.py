@@ -248,6 +248,17 @@ def dt_logout(request, next_page=None):
     except Exception as e:
       LOG.warning("Error closing %s session: %s" % (session_app, e))
 
+    # Close Spark session on logout
+  session_app = 'sparksql'
+  if request.user.has_hue_permission(action='access', app='spark'):
+    session = {"type": session_app, "sourceMethod": "dt_logout"}
+    try:
+      get_api(request, session).close_session(session, request=request)
+    except PopupException as e:
+      LOG.warning("Error closing %s session: %s" % (session_app, e.message.encode('utf-8')))
+    except Exception as e:
+      LOG.warning("Error closing %s session: %s" % (session_app, e))
+
   backends = get_backends()
   if backends:
     for backend in backends:

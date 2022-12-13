@@ -503,7 +503,7 @@ def upload_table_stats(request):
 
     try:
       if with_ddl:
-        db = _get_db(request.user, source_type=source_platform)
+        db = _get_db(request.user, source_type=source_platform, request=request)
         query = hql_query('SHOW CREATE TABLE `%(database)s`.`%(table)s`' % path)
         handle = db.execute_and_wait(query, timeout_sec=5.0)
 
