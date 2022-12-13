@@ -139,9 +139,7 @@ def get(user, query_server=None, cluster=None):
         HiveServerClientCompatible(HiveServerClient(query_server, user)),
         QueryHistory.SERVER_TYPE[1][0]
       )
-    dbms = DBMS_CACHE[user.id][query_server['server_name']]
-    dbms.client.query_server = query_server
-    return dbms
+    return DBMS_CACHE[user.id][query_server['server_name']]
   finally:
     DBMS_CACHE_LOCK.release()
 
