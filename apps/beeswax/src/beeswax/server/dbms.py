@@ -301,8 +301,9 @@ def get_query_server_config(name='beeswax', connector=None, refresh_token: dict 
       refresh_token_property = SPARK_REFRESH_TOKEN_PROPERTY.get()
       LOG.info('refresh_token_property %s' % str(refresh_token_property))
       if refresh_token_property:
-        assert refresh_token is not None
-        query_server.update(refresh_token)
+        LOG.debug(f'SPARK REFRESH TOKEN {refresh_token}')
+        if refresh_token:
+          query_server.update(refresh_token)
       if not SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD.get():
         query_server.update({
           'auth_username': None,

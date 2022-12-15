@@ -172,7 +172,10 @@ def _execute_notebook(request, notebook, snippet):
         pre_execute_sessions = notebook['sessions']
         notebook['sessions'] = sessions
         if isinstance(interpreter.api, HS2Api):
-          spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+          spark_refresh_token = None
+          from notebook.models import MockedDjangoRequest
+          if not isinstance(request, MockedDjangoRequest):
+            spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
           response['handle'] = interpreter.execute(notebook, snippet, refresh_token=spark_refresh_token)
         else:
           response['handle'] = interpreter.execute(notebook, snippet)
