@@ -171,8 +171,11 @@ def _execute_notebook(request, notebook, snippet):
         # interpreter.execute needs the sessions, but we don't want to persist them
         pre_execute_sessions = notebook['sessions']
         notebook['sessions'] = sessions
+        from notebook.models import MockedDjangoRequest
         if isinstance(interpreter.api, HS2Api):
-          spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+          spark_refresh_token = None
+          if not isinstance(request, MockedDjangoRequest):
+            spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
           response['handle'] = interpreter.execute(notebook, snippet, refresh_token=spark_refresh_token)
         else:
           response['handle'] = interpreter.execute(notebook, snippet)
