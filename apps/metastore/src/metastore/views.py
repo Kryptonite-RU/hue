@@ -86,8 +86,8 @@ Database Views
 def databases(request):
   search_filter = request.GET.get('filter', '')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, cluster=cluster, refresh_token=spark_refresh_token)
   databases = db.get_databases(search_filter)
   apps_list = _get_apps(request.user, '')
 
@@ -111,8 +111,8 @@ def databases(request):
 def drop_database(request):
   source_type = request.POST.get('source_type', request.GET.get('source_type', 'hive'))
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   if request.method == 'POST':
     databases = request.POST.getlist('database_selection')
@@ -165,8 +165,8 @@ def alter_database(request, database):
 
   source_type = request.POST.get('source_type', 'hive')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   try:
     properties = request.POST.get('properties')
@@ -193,8 +193,8 @@ def get_database_metadata(request, database):
 
   source_type = request.POST.get('source_type', 'hive')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   try:
     db_metadata = db.get_database(database)
@@ -237,8 +237,8 @@ Table Views
 """
 def show_tables(request, database=None):
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, cluster=cluster, refresh_token=spark_refresh_token)
 
   if database is None:
     database = 'default' # Assume always 'default'
@@ -293,8 +293,8 @@ def show_tables(request, database=None):
 def get_table_metadata(request, database, table):
   cluster = json.loads(request.POST.get('cluster', '{}'))
   source_type = request.POST.get('source_type')
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
   response = {'status': -1, 'data': ''}
   try:
     table_metadata = db.get_table(database, table)
@@ -317,8 +317,8 @@ def describe_table(request, database, table):
   app_name = get_app_name(request)
   cluster = json.loads(request.POST.get('cluster', '{}'))
   source_type = request.POST.get('source_type', request.GET.get('connector_id', request.GET.get('source_type', 'hive')))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   try:
     table = db.get_table(database, table)
@@ -381,8 +381,8 @@ def alter_table(request, database, table):
 
   source_type = request.POST.get('source_type', 'hive')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   try:
     new_table_name = request.POST.get('new_table_name', None)
@@ -416,8 +416,8 @@ def alter_column(request, database, table):
 
   source_type = request.POST.get('source_type', 'hive')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   try:
     column = request.POST.get('column', None)
@@ -461,8 +461,8 @@ def alter_column(request, database, table):
 def drop_table(request, database):
   source_type = request.POST.get('source_type', request.GET.get('source_type', 'hive'))
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   if request.method == 'POST':
     try:
@@ -529,8 +529,8 @@ def load_table(request, database, table):
 
   source_type = request.POST.get('source_type', request.GET.get('source_type', 'hive'))
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   table = db.get_table(database, table)
 
@@ -603,8 +603,8 @@ def load_table(request, database, table):
 
 def describe_partitions(request, database, table):
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, cluster=cluster, refresh_token=spark_refresh_token)
   table_obj = db.get_table(database, table)
 
   if not table_obj.partition_keys:
@@ -688,8 +688,8 @@ def _massage_partition(database, table, partition):
 
 def browse_partition(request, database, table, partition_spec):
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, cluster=cluster, refresh_token=spark_refresh_token)
   try:
     decoded_spec = urllib.parse.unquote(partition_spec)
     partition_table = db.describe_partition(database, table, decoded_spec)
@@ -724,8 +724,8 @@ def read_partition(request, database, table, partition_spec):
 def drop_partition(request, database, table):
   source_type = request.POST.get('source_type', 'hive')
   cluster = json.loads(request.POST.get('cluster', '{}'))
-
-  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, request=request)
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  db = _get_db(user=request.user, source_type=source_type, cluster=cluster, refresh_token=spark_refresh_token)
 
   if request.method == 'POST':
     partition_specs = request.POST.getlist('partition_selection')
@@ -764,8 +764,7 @@ def has_write_access(user):
   return is_admin(user) or user.has_hue_permission(action="write", app=DJANGO_APPS[0])
 
 
-
-def _get_db(user, source_type=None, cluster=None, request=None):
+def _get_db(user, source_type=None, cluster=None, refresh_token: dict = None):
   if source_type is None:
     cluster_config = get_cluster_config(user)
     if FORCE_HS2_METADATA.get() and cluster_config['app_config'].get('editor') and \
@@ -776,7 +775,7 @@ def _get_db(user, source_type=None, cluster=None, request=None):
 
   name = source_type if source_type != 'hive' else 'beeswax'
 
-  query_server = get_query_server_config(name=name, connector=cluster, request=request)
+  query_server = get_query_server_config(name=name, connector=cluster, refresh_token=refresh_token)
   return dbms.get(user, query_server)
 
 
