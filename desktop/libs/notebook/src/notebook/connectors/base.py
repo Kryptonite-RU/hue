@@ -562,7 +562,15 @@ class Api(object):
     max_rows = conf.DOWNLOAD_ROW_LIMIT.get()
     max_bytes = conf.DOWNLOAD_BYTES_LIMIT.get()
 
-    content_generator = data_export.DataAdapter(result_wrapper, max_rows=max_rows, max_bytes=max_bytes)
+    spark_refresh_token = self.request.session.get('oidc_refresh_token', None)
+    if spark_refresh_token:
+      spark_refresh_token = {'SPARK_REFRESH_TOKEN': spark_refresh_token}
+    LOG.debug(
+      f'DOWNLOAD function. Result_wrapper.api: {type(result_wrapper.api)}. SPARK_REFRESH_TOKEN: {spark_refresh_token}'
+    )
+    content_generator = data_export.DataAdapter(
+      result_wrapper, max_rows=max_rows, max_bytes=max_bytes, refresh_token=spark_refresh_token
+    )
     return export_csvxls.create_generator(content_generator, file_format)
 
   def get_log(self, notebook, snippet, startFrom=None, size=None):
@@ -705,7 +713,7 @@ class ExecutionWrapper(object):
     self.callback = callback
     self.should_close = False
 
-  def fetch(self, handle, start_over=None, rows=None):
+  def fetch(self, handle, start_over=None, rows=None, refresh_token: dict = None):
     if start_over:
       if not self.snippet['result'].get('handle') \
           or not self.snippet['result']['handle'].get('guid') \
@@ -723,8 +731,10 @@ class ExecutionWrapper(object):
     if self.snippet['result']['handle'].get('sync', False):
       result = self.snippet['result']['handle']['result']
     else:
-      result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over)
-
+      if refresh_token:
+        result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over, refresh_token=refresh_token)
+      else:
+        result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over)
     return ResultWrapper(result.get('meta'), result.get('data'), result.get('has_more'))
 
   def _until_available(self):
