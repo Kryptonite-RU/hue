@@ -147,7 +147,9 @@ def new_search(request):
   engine = request.GET.get('engine', 'solr')
   cluster = request.POST.get('cluster','""')
 
-  collections = get_engine(request.user, engine, cluster=cluster).datasets() if engine != 'report' else ['default']
+  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  collections = get_engine(request.user, engine, cluster=cluster).\
+      datasets(refresh_token=spark_refresh_token) if engine != 'report' else ['default']
 
   if not collections:
     if engine == 'solr':

@@ -34,6 +34,7 @@ from django.utils.html import escape
 
 from notebook.models import make_notebook
 from notebook.connectors.base import get_api, OperationTimeout, Notebook
+from notebook.connectors.hiveserver2 import HS2Api
 
 from dashboard.dashboard_api import DashboardApi
 from dashboard.models import Collection2, augment_response
@@ -237,12 +238,21 @@ class SQLDashboardApi(DashboardApi):
 
 
   # This method currently behaves more like a static method
-  def datasets(self, show_all=False, database=None):
+  def datasets(self, show_all=False, database=None, refresh_token: dict = None):
     snippet = {'type': self.engine}
 
     # Ideally from left assist at some point instead
     if database is None:
-      databases = get_api(MockRequest(self.user, self.cluster), snippet).autocomplete(snippet)['databases']
+      api = get_api(MockRequest(self.user, self.cluster), snippet)
+      if isinstance(api, HS2Api):
+        databases = api.autocomplete(snippet, refresh_token=refresh_token)['databases']
+        database = databases and 'default' not in databases and sorted(databases)[0] or 'default'
+        return [
+          database + '.' + table['name']
+          for table in api.autocomplete(snippet, database=database, refresh_token=refresh_token)['tables_meta']
+        ]
+      else:
+        databases = api.autocomplete(snippet)['databases']
       database = databases and 'default' not in databases and sorted(databases)[0] or 'default'
 
     return [
