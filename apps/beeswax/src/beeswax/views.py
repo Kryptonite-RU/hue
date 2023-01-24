@@ -1147,8 +1147,8 @@ def _update_query_state(query_history):
 
 def get_db_choices(request):
   app_name = get_app_name(request)
-  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-  query_server = get_query_server_config(app_name, refresh_token=spark_refresh_token)
+  spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+  query_server = get_query_server_config(app_name, access_token=spark_access_token)
   db = dbms.get(request.user, query_server)
   dbs = db.get_databases()
   return [(db, db) for db in dbs]

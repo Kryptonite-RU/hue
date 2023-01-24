@@ -503,8 +503,8 @@ def upload_table_stats(request):
 
     try:
       if with_ddl:
-        spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-        db = _get_db(request.user, source_type=source_platform, refresh_token=spark_refresh_token)
+        spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+        db = _get_db(request.user, source_type=source_platform, access_token=spark_access_token)
         query = hql_query('SHOW CREATE TABLE `%(database)s`.`%(table)s`' % path)
         handle = db.execute_and_wait(query, timeout_sec=5.0)
 

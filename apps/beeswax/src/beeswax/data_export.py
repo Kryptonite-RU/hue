@@ -90,7 +90,7 @@ def upload(path, handle, user, db, fs, max_rows=-1, max_bytes=-1):
 class DataAdapter(object):
 
   def __init__(self, db, handle=None, max_rows=-1, start_over=True, max_bytes=-1, store_data_type_in_header=False,
-               refresh_token: dict = None):
+               access_token: dict = None):
     self.handle = handle
     self.db = db
     self.max_rows = max_rows
@@ -108,7 +108,7 @@ class DataAdapter(object):
     self.is_truncated = False
     self.has_more = True
     self.store_data_type_in_header = store_data_type_in_header
-    self.refresh_token = refresh_token
+    self.access_token = access_token
 
   def __iter__(self):
     return self
@@ -142,13 +142,13 @@ class DataAdapter(object):
     return size
 
   def __next__(self):
-    if self.refresh_token:
+    if self.access_token:
       results = self.db.fetch(
-        self.handle, start_over=self.start_over, rows=self.fetch_size, refresh_token=self.refresh_token
+        self.handle, start_over=self.start_over, rows=self.fetch_size, access_token=self.access_token
       )
     else:
       results = self.db.fetch(self.handle, start_over=self.start_over, rows=self.fetch_size)
-    LOG.debug(f'DATA ADAPTER. Refresh token: {self.refresh_token}')
+    LOG.debug(f'DATA ADAPTER. Refresh token: {self.access_token}')
     if self.first_fetched:
       self.first_fetched = False
       self.start_over = False
