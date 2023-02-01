@@ -463,7 +463,7 @@ class HiveServer2Dbms(object):
 
 
   def _get_tables_via_sparksql(self, database, table_names='*'):
-    hql = "SHOW TABLES IN %s" % database
+    hql = "SHOW TABLES IN `%s`" % database
     if table_names != '*':
       identifier = self.to_matching_wildcard(table_names)
       hql += " LIKE '%s'" % (identifier)
