@@ -114,8 +114,8 @@ def create_session(request):
   api = get_api(request, session)
 
   if isinstance(api.api, HS2Api):
-    spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-    session = api.create_session(lang=session['type'], properties=properties, refresh_token=spark_refresh_token)
+    spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+    session = api.create_session(lang=session['type'], properties=properties, access_token=spark_access_token)
   else:
     session = api.create_session(lang=session['type'], properties=properties)
   response['session'] = session
@@ -135,8 +135,8 @@ def close_session(request):
   api = get_api(request, {'type': session['type']})
 
   if isinstance(api.api, HS2Api):
-    spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-    session = api.close_session(session=session, refresh_token=spark_refresh_token)
+    spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+    session = api.close_session(session=session, access_token=spark_access_token)
   else:
     session = api.close_session(session=session)
   response['session'] = session
@@ -175,8 +175,8 @@ def _execute_notebook(request, notebook, snippet):
           spark_refresh_token = None
           from notebook.models import MockedDjangoRequest
           if not isinstance(request, MockedDjangoRequest):
-            spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-          response['handle'] = interpreter.execute(notebook, snippet, refresh_token=spark_refresh_token)
+            spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+          response['handle'] = interpreter.execute(notebook, snippet, access_token=spark_access_token)
         else:
           response['handle'] = interpreter.execute(notebook, snippet)
         notebook['sessions'] = pre_execute_sessions
@@ -293,8 +293,8 @@ def _check_status(request, notebook=None, snippet=None, operation_id=None):
   try:
     api = get_api(request, snippet)
     if isinstance(api.api, HS2Api):
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-      response['query_status'] = api.check_status(notebook, snippet, refresh_token=spark_refresh_token)
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+      response['query_status'] = api.check_status(notebook, snippet, access_token=spark_access_token)
     else:
       response['query_status'] = api.check_status(notebook, snippet)
     response['status'] = 0
@@ -361,8 +361,8 @@ def _fetch_result_data(request, notebook=None, snippet=None, operation_id=None, 
 
   api = get_api(request, snippet)
   if isinstance(api.api, HS2Api):
-    spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-    res = api.fetch_result(notebook, snippet, rows, start_over, refresh_token=spark_refresh_token)
+    spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+    res = api.fetch_result(notebook, snippet, rows, start_over, access_token=spark_access_token)
   else:
     res = api.fetch_result(notebook, snippet, rows, start_over)
   response = {
@@ -419,8 +419,8 @@ def fetch_result_size(request):
   with opentracing.tracer.start_span('notebook-fetch_result_size') as span:
     api = get_api(request, snippet)
     if isinstance(api.api, HS2Api):
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-      response['result'] = api.fetch_result_size(notebook, snippet, refresh_token=spark_refresh_token)
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+      response['result'] = api.fetch_result_size(notebook, snippet, access_token=spark_access_token)
     else:
       response['result'] = api.fetch_result_size(notebook, snippet)
 
@@ -450,8 +450,8 @@ def cancel_statement(request):
   with opentracing.tracer.start_span('notebook-cancel_statement') as span:
     api = get_api(request, snippet)
     if isinstance(api.api, HS2Api):
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-      response['result'] = api.cancel(notebook, snippet, refresh_token=spark_refresh_token)
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+      response['result'] = api.cancel(notebook, snippet, access_token=spark_access_token)
     else:
       response['result'] = api.cancel(notebook, snippet)
 
@@ -736,15 +736,15 @@ def close_notebook(request):
   for session in [_s for _s in notebook['sessions']]:
     try:
       api = get_api(request, session)
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
       if hasattr(api, 'close_session_idle'):
         if isinstance(api.api, HS2Api):
-          response['result'].append(api.close_session_idle(notebook, session, refresh_token=spark_refresh_token))
+          response['result'].append(api.close_session_idle(notebook, session, access_token=spark_access_token))
         else:
           response['result'].append(api.close_session_idle(notebook, session))
       else:
         if isinstance(api.api, HS2Api):
-          response['result'].append(api.close_session(session, refresh_token=spark_refresh_token))
+          response['result'].append(api.close_session(session, access_token=spark_access_token))
         else:
           response['result'].append(api.close_session(session))
     except QueryExpired:
@@ -773,8 +773,8 @@ def close_statement(request):
     with opentracing.tracer.start_span('notebook-close_statement') as span:
       api = get_api(request, snippet)
       if isinstance(api.api, HS2Api):
-        spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-        response['result'] = api.close_statement(notebook, snippet, refresh_token=spark_refresh_token)
+        spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+        response['result'] = api.close_statement(notebook, snippet, access_token=spark_access_token)
       else:
         response['result'] = api.close_statement(notebook, snippet)
 
@@ -809,9 +809,9 @@ def autocomplete(request, server=None, database=None, table=None, column=None, n
   try:
     api = get_api(request, snippet)
     if isinstance(api.api, HS2Api):
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
       autocomplete_data = api.autocomplete(
-        snippet, database, table, column, nested, action, refresh_token=spark_refresh_token
+        snippet, database, table, column, nested, action, access_token=spark_access_token
       )
     else:
       autocomplete_data = api.autocomplete(snippet, database, table, column, nested, action)
@@ -838,9 +838,9 @@ def get_sample_data(request, server=None, database=None, table=None, column=None
 
   api = get_api(request, snippet)
   if isinstance(api.api, HS2Api):
-    spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+    spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
     sample_data = api.get_sample_data(snippet, database, table, column, is_async=is_async, operation=operation,
-                                      refresh_token=spark_refresh_token)
+                                      access_token=spark_access_token)
   else:
     sample_data = api.get_sample_data(snippet, database, table, column, is_async=is_async, operation=operation)
   response.update(sample_data)
@@ -861,8 +861,8 @@ def explain(request):
 
   api = get_api(request, snippet)
   if isinstance(api.api, HS2Api):
-    spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-    response = api.explain(notebook, snippet, refresh_token=spark_refresh_token)
+    spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+    response = api.explain(notebook, snippet, access_token=spark_access_token)
   else:
     response = api.explain(notebook, snippet)
 
@@ -907,9 +907,9 @@ def export_result(request):
     if overwrite and request.fs.exists(destination):
       request.fs.do_as_user(request.user.username, request.fs.rmtree, destination)
     if isinstance(api.api, HS2Api):
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+      spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
       response['watch_url'] = api.export_data_as_hdfs_file(
-        snippet, destination, overwrite, refresh_token=spark_refresh_token
+        snippet, destination, overwrite, access_token=spark_access_token
       )
     else:
       response['watch_url'] = api.export_data_as_hdfs_file(snippet, destination, overwrite)
@@ -922,8 +922,8 @@ def export_result(request):
   elif data_format == 'hive-table':
     if is_embedded:
       if isinstance(api.api, HS2Api):
-        spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-        sql, success_url = api.export_data_as_table(notebook, snippet, destination, refresh_token=spark_refresh_token)
+        spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+        sql, success_url = api.export_data_as_table(notebook, snippet, destination, access_token=spark_access_token)
       else:
         sql, success_url = api.export_data_as_table(notebook, snippet, destination)
       task = make_notebook(
@@ -993,8 +993,8 @@ def export_result(request):
       else:
         api = get_api(request, snippet)
         if isinstance(api.api, HS2Api):
-          spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
-          sample = api.fetch_result(notebook, snippet, rows=4, start_over=True, refresh_token=spark_refresh_token)
+          spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
+          sample = api.fetch_result(notebook, snippet, rows=4, start_over=True, access_token=spark_access_token)
         else:
           sample = api.fetch_result(notebook, snippet, rows=4, start_over=True)
         for col in sample['meta']:
@@ -1123,9 +1123,9 @@ def describe(request, database, table=None, column=None):
 
   snippet = {'type': source_type, 'connector': connector}
   patch_snippet_for_connector(snippet)
-  spark_refresh_token = {'SPARK_REFRESH_TOKEN': request.session.get('oidc_refresh_token')}
+  spark_access_token = {'SPARK_ACCESS_TOKEN': request.session.get('oidc_access_token')}
   describe = get_api(request, snippet).\
-    describe(notebook, snippet, database, table, column=column, refresh_token=spark_refresh_token)
+    describe(notebook, snippet, database, table, column=column, access_token=spark_access_token)
   response.update(describe)
 
   return JsonResponse(response)

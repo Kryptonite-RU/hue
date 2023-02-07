@@ -562,14 +562,14 @@ class Api(object):
     max_rows = conf.DOWNLOAD_ROW_LIMIT.get()
     max_bytes = conf.DOWNLOAD_BYTES_LIMIT.get()
 
-    spark_refresh_token = self.request.session.get('oidc_refresh_token', None)
-    if spark_refresh_token:
-      spark_refresh_token = {'SPARK_REFRESH_TOKEN': spark_refresh_token}
+    spark_access_token = self.request.session.get('oidc_access_token', None)
+    if spark_access_token:
+      spark_access_token = {'SPARK_ACCESS_TOKEN': spark_access_token}
     LOG.debug(
-      f'DOWNLOAD function. Result_wrapper.api: {type(result_wrapper.api)}. SPARK_REFRESH_TOKEN: {spark_refresh_token}'
+      f'DOWNLOAD function. Result_wrapper.api: {type(result_wrapper.api)}. SPARK_ACCESS_TOKEN: {spark_access_token}'
     )
     content_generator = data_export.DataAdapter(
-      result_wrapper, max_rows=max_rows, max_bytes=max_bytes, refresh_token=spark_refresh_token
+      result_wrapper, max_rows=max_rows, max_bytes=max_bytes, access_token=spark_access_token
     )
     return export_csvxls.create_generator(content_generator, file_format)
 
@@ -629,12 +629,12 @@ class Api(object):
 
     return client.similar_queries(source_platform, query)
 
-  def describe(self, notebook, snippet, database=None, table=None, column=None, refresh_token: dict = None):
+  def describe(self, notebook, snippet, database=None, table=None, column=None, access_token: dict = None):
     if column:
-      if refresh_token is None:
+      if access_token is None:
         response = self.describe_table(notebook, snippet, database, table)
       else:
-        response = self.describe_table(notebook, snippet, database, table, refresh_token=refresh_token)
+        response = self.describe_table(notebook, snippet, database, table, access_token=access_token)
     elif table:
       response = {
           'status': 0,
@@ -649,10 +649,10 @@ class Api(object):
           'details': {'properties': {'table_type': ''}, 'stats': {}},
           'stats': []
       }
-      if refresh_token is None:
+      if access_token is None:
         describe_table = self.describe_table(notebook, snippet, database, table)
       else:
-        describe_table = self.describe_table(notebook, snippet, database, table, refresh_token=refresh_token)
+        describe_table = self.describe_table(notebook, snippet, database, table, access_token=access_token)
       response.update(describe_table)
     else:
       response = {
@@ -663,23 +663,23 @@ class Api(object):
         'hdfs_link': '',
         'message': ''
       }
-      if refresh_token is None:
+      if access_token is None:
         describe_database = self.describe_database(notebook, snippet, database)
       else:
-        describe_database = self.describe_database(notebook, snippet, database, refresh_token=refresh_token)
+        describe_database = self.describe_database(notebook, snippet, database, access_token=access_token)
       response.update(describe_database)
     return response
 
-  def describe_column(self, notebook, snippet, database=None, table=None, column=None, refresh_token: dict = None):
+  def describe_column(self, notebook, snippet, database=None, table=None, column=None, access_token: dict = None):
     return []
 
-  def describe_table(self, notebook, snippet, database=None, table=None, refresh_token: dict = None):
+  def describe_table(self, notebook, snippet, database=None, table=None, access_token: dict = None):
     response = {}
     autocomplete = self.autocomplete(snippet, database=database, table=table)
     response['cols'] = autocomplete['extended_columns'] if autocomplete and autocomplete.get('extended_columns') else [],
     return response
 
-  def describe_database(self, notebook, snippet, database=None, refresh_token: dict = None):
+  def describe_database(self, notebook, snippet, database=None, access_token: dict = None):
     return {}
 
   def close_statement(self, notebook, snippet): pass
@@ -713,7 +713,7 @@ class ExecutionWrapper(object):
     self.callback = callback
     self.should_close = False
 
-  def fetch(self, handle, start_over=None, rows=None, refresh_token: dict = None):
+  def fetch(self, handle, start_over=None, rows=None, access_token: dict = None):
     if start_over:
       if not self.snippet['result'].get('handle') \
           or not self.snippet['result']['handle'].get('guid') \
@@ -731,8 +731,8 @@ class ExecutionWrapper(object):
     if self.snippet['result']['handle'].get('sync', False):
       result = self.snippet['result']['handle']['result']
     else:
-      if refresh_token:
-        result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over, refresh_token=refresh_token)
+      if access_token:
+        result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over, access_token=access_token)
       else:
         result = self.api.fetch_result(self.notebook, self.snippet, rows, start_over)
     return ResultWrapper(result.get('meta'), result.get('data'), result.get('has_more'))

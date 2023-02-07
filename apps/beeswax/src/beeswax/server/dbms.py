@@ -144,7 +144,7 @@ def get(user, query_server=None, cluster=None):
     DBMS_CACHE_LOCK.release()
 
 
-def get_query_server_config(name='beeswax', connector=None, refresh_token: dict = None):
+def get_query_server_config(name='beeswax', connector=None, access_token: dict = None):
   if connector and has_connectors(): # TODO: Give empty connector when no connector in use
     LOG.debug("Query via connector %s" % name)
     query_server = get_query_server_config_via_connector(connector)
@@ -289,7 +289,7 @@ def get_query_server_config(name='beeswax', connector=None, refresh_token: dict 
 
     if name == 'sparksql':  # Extends Hive as very similar
       from spark.conf import SQL_SERVER_HOST as SPARK_SERVER_HOST, SQL_SERVER_PORT as SPARK_SERVER_PORT,\
-        USE_SASL as SPARK_USE_SASL, REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY, USE_DEFAULT_AUTH_NAME_PASSWORD as SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD
+        USE_SASL as SPARK_USE_SASL, ACCESS_TOKEN_PROPERTY as SPARK_ACCESS_TOKEN_PROPERTY, USE_DEFAULT_AUTH_NAME_PASSWORD as SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD
 
       query_server.update({
           'server_name': 'sparksql',
@@ -298,12 +298,12 @@ def get_query_server_config(name='beeswax', connector=None, refresh_token: dict 
           'use_sasl': SPARK_USE_SASL.get()
       })
 
-      refresh_token_property = SPARK_REFRESH_TOKEN_PROPERTY.get()
-      LOG.info('refresh_token_property %s' % str(refresh_token_property))
-      if refresh_token_property:
-        LOG.debug(f'SPARK REFRESH TOKEN {refresh_token}')
-        if refresh_token:
-          query_server.update(refresh_token)
+      access_token_property = SPARK_ACCESS_TOKEN_PROPERTY.get()
+      LOG.info('access_token_property %s' % str(access_token_property))
+      if access_token_property:
+        LOG.debug(f'SPARK ACCESS TOKEN {access_token}')
+        if access_token:
+          query_server.update(access_token)
       if not SPARK_USE_DEFAULT_AUTH_NAME_PASSWORD.get():
         query_server.update({
           'auth_username': None,

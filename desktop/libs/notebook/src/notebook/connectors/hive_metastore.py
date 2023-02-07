@@ -67,7 +67,7 @@ def query_error_handler(func):
 class HiveMetastoreApi(Api):
   @query_error_handler
   def autocomplete(self, snippet, database=None, table=None, column=None, nested=None, operation=None,
-                   refresh_token: dict = None):
+                   access_token: dict = None):
     db = self._get_db(snippet, cluster=self.cluster, refresh_token=refresh_token)
 
     return _autocomplete(
@@ -78,7 +78,7 @@ class HiveMetastoreApi(Api):
   def get_sample_data(self, snippet, database=None, table=None, column=None, is_async=False, operation=None):
     return []
 
-  def _get_db(self, snippet, is_async=False, cluster=None, refresh_token: dict = None):
+  def _get_db(self, snippet, is_async=False, cluster=None, access_token: dict = None):
     return dbms.get(
       self.user, query_server=get_query_server_config(name='hms', cluster=cluster, refresh_token=refresh_token)
     )

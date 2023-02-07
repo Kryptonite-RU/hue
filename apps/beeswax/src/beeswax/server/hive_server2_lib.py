@@ -31,7 +31,7 @@ from TCLIService.ttypes import TOpenSessionReq, TGetTablesReq, TFetchResultsReq,
 
 from desktop.lib import python_util, thrift_util
 from desktop.conf import DEFAULT_USER, USE_THRIFT_HTTP_JWT
-from spark.conf import REFRESH_TOKEN_PROPERTY as SPARK_REFRESH_TOKEN_PROPERTY
+from spark.conf import ACCESS_TOKEN_PROPERTY as SPARK_ACCESS_TOKEN_PROPERTY
 
 from beeswax import conf as beeswax_conf, hive_site
 from beeswax.hive_site import hiveserver2_use_ssl
@@ -691,10 +691,10 @@ class HiveServerClient(object):
     if self.query_server.get('dialect') == 'impala' and self.query_server['SESSION_TIMEOUT_S'] > 0:
       kwargs['configuration'].update({'idle_session_timeout': str(self.query_server['SESSION_TIMEOUT_S'])})
 
-    refresh_token_property = SPARK_REFRESH_TOKEN_PROPERTY.get()
-    LOG.info('refresh_token_property %s' % str(refresh_token_property))
-    if refresh_token_property:
-      kwargs['configuration'].update({refresh_token_property: str(self.query_server['SPARK_REFRESH_TOKEN'])})
+    access_token_property = SPARK_ACCESS_TOKEN_PROPERTY.get()
+    LOG.info('access_token_property %s' % str(access_token_property))
+    if access_token_property:
+      kwargs['configuration'].update({access_token_property: str(self.query_server['SPARK_ACCESS_TOKEN'])})
 
     LOG.info('Opening %s thrift session for user %s' % (self.query_server['server_name'], user.username))
 
